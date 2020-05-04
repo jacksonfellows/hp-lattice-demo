@@ -9,7 +9,7 @@
                 position: absolute;
                 background: lightgrey;
                 right: 0;
-                text-align: right;
+                text-align: center;
                 padding: 10;
                 font-size: 20pt;
             }
@@ -22,269 +22,287 @@
     <body>
         <div class="overlay">
             <label for="energy">E: </label>
-            <b id="energy" name="energy">
-</p></div>
-<svg width="100%" height="100%" id="l" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-        <pattern id="grid" patternUnits="userSpaceOnUse">
-            <path fill="none" stroke="gray" stroke-width="1"/>
-        </pattern>
-    </defs>
-    <rect width="100%" height="100%" fill="url(#grid)"/>
-    <g id="highlights"></g>
-    <g id="chain"></g>
-    <g id="arrows"></g>
-</svg>
-<script>
-    let l = document.getElementById("l");
+            <b id="energy" name="energy"></b>
+            <br/>
+            <button id="reset" style="margin-top: 10">Reset chain</button>
+        </div>
+        <svg width="100%" height="100%" id="l" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <pattern id="grid" patternUnits="userSpaceOnUse">
+                    <path fill="none" stroke="gray" stroke-width="1"/>
+                </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#grid)"/>
+            <g id="highlights"></g>
+            <g id="chain"></g>
+            <g id="arrows"></g>
+        </svg>
+        <script>
+            let l = document.getElementById("l");
 
-    let grid_dx = 50;
-    let grid_dy = 50;
-    let aa_r = 7;
-    let percent_h = 0.5;
-    let chain_len = 10;
+            let grid_dx = 50;
+            let grid_dy = 50;
+            let aa_r = 7;
+            let percent_h = 0.5;
+            let chain_len = 10;
 
-    let grid = l.getElementById("grid");
-    grid.setAttributeNS(null, "width", grid_dx);
-    grid.setAttributeNS(null, "height", grid_dy);
-    grid.children[0].setAttributeNS(null, "d", "M " + grid_dx + " 0 L 0 0 0 " + grid_dy);
+            let grid = l.getElementById("grid");
+            grid.setAttributeNS(null, "width", grid_dx);
+            grid.setAttributeNS(null, "height", grid_dy);
+            grid.children[0].setAttributeNS(null, "d", "M " + grid_dx + " 0 L 0 0 0 " + grid_dy);
 
-    let random_hps = len=>Array.apply(null, Array(len + 1)).map(()=>Math.random() < percent_h);
+            let random_hps = len=>Array.apply(null, Array(len + 1)).map(()=>Math.random() < percent_h);
 
-    let aas = random_hps(chain_len);
+            let aas = random_hps(chain_len);
 
-    let l_rect = l.getBoundingClientRect();
-    let l_width = l_rect.width;
-    let l_height = l_rect.height;
-    let init_x = Math.floor((l_width / 2) / grid_dx - chain_len / 2) * grid_dx;
-    let init_y = Math.floor((l_height / 2) / grid_dy) * grid_dy;
+            let l_rect = l.getBoundingClientRect();
+            let l_width = l_rect.width;
+            let l_height = l_rect.height;
+            let init_x = Math.floor((l_width / 2) / grid_dx - chain_len / 2) * grid_dx;
+            let init_y = Math.floor((l_height / 2) / grid_dy) * grid_dy;
 
-    let svgns = l.getAttribute("xmlns");
+            let svgns = l.getAttribute("xmlns");
 
-    function make_point(svg_elem, x_prop, y_prop) {
-        return {
-            get x() {
-                return parseFloat(svg_elem.getAttributeNS(null, x_prop));
-            },
-            get y() {
-                return parseFloat(svg_elem.getAttributeNS(null, y_prop));
-            },
-            set x(new_x) {
-                svg_elem.setAttributeNS(null, x_prop, new_x);
-            },
-            set y(new_y) {
-                svg_elem.setAttributeNS(null, y_prop, new_y);
-            }
-        }
-    }
-
-    function combine_points(p1, p2) {
-        return {
-            get x() {
-                return p1.x;
-            },
-            get y() {
-                return p1.y;
-            },
-            set x(new_x) {
-                p1.x = new_x;
-                p2.x = new_x;
-            },
-            set y(new_y) {
-                p1.y = new_y;
-                p2.y = new_y;
-            }
-        }
-    }
-
-    let g = l.getElementById("chain");
-
-    function init_circle(x, y, r, stroke, fill) {
-        let c = document.createElementNS(svgns, "circle");
-        c.setAttributeNS(null, "cx", x);
-        c.setAttributeNS(null, "cy", y);
-        c.setAttributeNS(null, "r", r);
-        c.setAttributeNS(null, "stroke", stroke)
-        c.setAttributeNS(null, "fill", fill);
-        return c;
-    }
-
-    function init_node(x, y, r, fill) {
-        let c = init_circle(x, y, r, "black", fill)
-        g.appendChild(c);
-        return [c, make_point(c, "cx", "cy")];
-    }
-
-    function init_line(p1, p2) {
-        let line = document.createElementNS(svgns, "line");
-        line.setAttributeNS(null, "x1", p1.x);
-        line.setAttributeNS(null, "y1", p1.y);
-        line.setAttributeNS(null, "x2", p2.x);
-        line.setAttributeNS(null, "y2", p2.y);
-        return line;
-    }
-
-    function init_line_between(p1, p2) {
-        let line = init_line(p1, p2);
-        line.setAttributeNS(null, "stroke", "black");
-        //                 line.setAttributeNS(null, "stroke-width", 5);
-        g.prepend(line);
-        return [make_point(line, "x1", "y1"), make_point(line, "x2", "y2")];
-    }
-
-    let chain = aas.map((aa,i)=>{
-        let cp = init_node(init_x + i * grid_dx, init_y, aa_r, aa ? "black" : "white");
-        return {
-            aa,
-            c: cp[0],
-            p: cp[1]
-        }
-    }
-    );
-
-    let arrows = l.getElementById("arrows");
-
-    function clear_arrows() {
-        arrows.textContent = "";
-    }
-
-    function init_arrow(p1, p2, color, thunk) {
-        let arrow = init_line(p1, p2);
-        arrow.setAttributeNS(null, "stroke", color);
-        arrow.setAttributeNS(null, "stroke-width", 5);
-        arrow.setAttributeNS(null, "class", "clickable");
-        arrow.addEventListener("mousedown", _=>{
-            thunk(),
-            clear_arrows()
-        }
-        );
-        arrows.appendChild(arrow);
-        return arrow;
-    }
-
-    for (let i = 0; i < chain_len; ++i) {
-        let ps = init_line_between(chain[i].p, chain[i + 1].p);
-
-        chain[i].p = combine_points(chain[i].p, ps[0]);
-        chain[i + 1].p = combine_points(chain[i + 1].p, ps[1]);
-    }
-
-    function make_arrows(first_p, pivot_p, c, start_i, end_i) {
-        let x_dir = (first_p.y - pivot_p.y) / grid_dy;
-        let y_dir = (first_p.x - pivot_p.x) / grid_dx;
-        let offset_x = grid_dx / 2;
-        let offset_y = grid_dy / 2;
-        if (canRotateLeft(c, start_i, end_i, pivot_p)) {
-            let left_p = {
-                x: first_p.x + offset_x * x_dir,
-                y: first_p.y - offset_x * y_dir
-            };
-            init_arrow(first_p, left_p, "red", _=>rotateLeft(c.slice(start_i, end_i), pivot_p));
-        }
-        if (canRotateRight(c, start_i, end_i, pivot_p)) {
-            let right_p = {
-                x: first_p.x - offset_x * x_dir,
-                y: first_p.y + offset_y * y_dir
-            };
-            init_arrow(first_p, right_p, "green", _=>rotateRight(c.slice(start_i, end_i), pivot_p));
-        }
-    }
-
-    for (let i = 0; i <= chain_len; ++i) {
-        let c = chain[i].c;
-        c.setAttributeNS(null, "class", "clickable");
-        c.addEventListener("mousedown", _=>{
-            clear_arrows();
-
-            let pivot_p = chain[i].p;
-            let left_p = i != 0 && chain[i - 1].p;
-            let right_p = i != chain_len && chain[i + 1].p;
-
-            let highlight_c = init_circle(pivot_p.x, pivot_p.y, aa_r + 5, "yellow", "none");
-            highlight_c.setAttributeNS(null, "stroke-width", 3);
-            arrows.appendChild(highlight_c);
-
-            if (left_p) {
-                make_arrows(left_p, pivot_p, chain, 0, i);
-            }
-            if (right_p) {
-                make_arrows(right_p, pivot_p, chain, i, chain_len + 1);
-            }
-        }
-        );
-    }
-
-    function rotateAround(c, pivot, dir) {
-        c.forEach(e=>{
-            let new_x = (dir == "right" ? -1 : 1) * (e.p.y - pivot.y) + pivot.x;
-            let new_y = (dir == "left" ? -1 : 1) * (e.p.x - pivot.x) + pivot.y;
-            e.p.x = new_x;
-            e.p.y = new_y;
-        }
-        );
-        // TODO: don't mess with global chain
-        highlight_hh_pairs(chain);
-    }
-    let rotateRight = (c,pivot)=>rotateAround(c, pivot, "right");
-    let rotateLeft = (c,pivot)=>rotateAround(c, pivot, "left");
-
-    function saw(c) {
-        c.sort();
-        for (let i = 0; i < c.length; ++i) {
-            if (i != c.length - 1 && c[i][0] == c[i + 1][0] && c[i][1] == c[i + 1][1]) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    function canRotate(c, start_i, end_i, pivot, dir) {
-        let c_copy = c.map(e=>[e.p.x, e.p.y]);
-        c_copy.slice(start_i, end_i).forEach(e=>{
-            let new_x = (dir == "right" ? -1 : 1) * (e[1] - pivot.y) + pivot.x;
-            let new_y = (dir == "left" ? -1 : 1) * (e[0] - pivot.x) + pivot.y;
-            e[0] = new_x;
-            e[1] = new_y;
-        }
-        );
-        return saw(c_copy);
-    }
-    let canRotateRight = (c,s,e,p)=>canRotate(c, s, e, p, "right");
-    let canRotateLeft = (c,s,e,p)=>canRotate(c, s, e, p, "left");
-
-    function adjacent(p1, p2) {
-        let dx = Math.abs(p1.x - p2.x);
-        let dy = Math.abs(p1.y - p2.y);
-        return (dx == grid_dx && dy == 0) || (dx == 0 && dy == grid_dy);
-    }
-
-    let highlights = l.getElementById("highlights");
-
-    function clear_highlights() {
-        highlights.textContent = "";
-    }
-
-    let energy_p = document.getElementById("energy");
-    function highlight_hh_pairs(c) {
-        let energy = 0;
-        clear_highlights();
-        for (let i = 0; i < c.length; ++i) {
-            if (c[i].aa) {
-                for (let j = i + 1; j < c.length; ++j) {
-                    if (c[j].aa && adjacent(c[i].p, c[j].p)) {
-                        --energy;
-                        let h = init_line(c[i].p, c[j].p);
-                        h.setAttributeNS(null, "stroke", "blue");
-                        h.setAttributeNS(null, "stroke-width", aa_r * 2);
-                        h.setAttributeNS(null, "opacity", 0.3);
-                        highlights.appendChild(h);
+            function make_point(svg_elem, x_prop, y_prop) {
+                return {
+                    get x() {
+                        return parseFloat(svg_elem.getAttributeNS(null, x_prop));
+                    },
+                    get y() {
+                        return parseFloat(svg_elem.getAttributeNS(null, y_prop));
+                    },
+                    set x(new_x) {
+                        svg_elem.setAttributeNS(null, x_prop, new_x);
+                    },
+                    set y(new_y) {
+                        svg_elem.setAttributeNS(null, y_prop, new_y);
                     }
                 }
             }
-        }
-        energy_p.textContent = energy;
-    }
 
-    highlight_hh_pairs(chain);
-</script>
-</body></html>
+            function combine_points(p1, p2) {
+                return {
+                    get x() {
+                        return p1.x;
+                    },
+                    get y() {
+                        return p1.y;
+                    },
+                    set x(new_x) {
+                        p1.x = new_x;
+                        p2.x = new_x;
+                    },
+                    set y(new_y) {
+                        p1.y = new_y;
+                        p2.y = new_y;
+                    }
+                }
+            }
+
+            let g = l.getElementById("chain");
+
+            function init_circle(x, y, r, stroke, fill) {
+                let c = document.createElementNS(svgns, "circle");
+                c.setAttributeNS(null, "cx", x);
+                c.setAttributeNS(null, "cy", y);
+                c.setAttributeNS(null, "r", r);
+                c.setAttributeNS(null, "stroke", stroke)
+                c.setAttributeNS(null, "fill", fill);
+                return c;
+            }
+
+            function init_node(x, y, r, fill) {
+                let c = init_circle(x, y, r, "black", fill)
+                g.appendChild(c);
+                return [c, make_point(c, "cx", "cy")];
+            }
+
+            function init_line(p1, p2) {
+                let line = document.createElementNS(svgns, "line");
+                line.setAttributeNS(null, "x1", p1.x);
+                line.setAttributeNS(null, "y1", p1.y);
+                line.setAttributeNS(null, "x2", p2.x);
+                line.setAttributeNS(null, "y2", p2.y);
+                return line;
+            }
+
+            function init_line_between(p1, p2) {
+                let line = init_line(p1, p2);
+                line.setAttributeNS(null, "stroke", "black");
+                //                 line.setAttributeNS(null, "stroke-width", 5);
+                g.prepend(line);
+                return [make_point(line, "x1", "y1"), make_point(line, "x2", "y2")];
+            }
+
+            let chain = aas.map((aa,i)=>{
+                let cp = init_node(init_x + i * grid_dx, init_y, aa_r, aa ? "black" : "white");
+                return {
+                    aa,
+                    c: cp[0],
+                    p: cp[1]
+                }
+            }
+            );
+
+            let arrows = l.getElementById("arrows");
+
+            function clear_arrows() {
+                arrows.textContent = "";
+            }
+
+            function init_arrow(p1, p2, color, thunk) {
+                let arrow = init_line(p1, p2);
+                arrow.setAttributeNS(null, "stroke", color);
+                arrow.setAttributeNS(null, "stroke-width", 5);
+                arrow.setAttributeNS(null, "class", "clickable");
+                arrow.addEventListener("mousedown", _=>{
+                    thunk(),
+                    clear_arrows()
+                }
+                );
+                arrows.appendChild(arrow);
+                return arrow;
+            }
+
+            for (let i = 0; i < chain_len; ++i) {
+                let ps = init_line_between(chain[i].p, chain[i + 1].p);
+
+                chain[i].p = combine_points(chain[i].p, ps[0]);
+                chain[i + 1].p = combine_points(chain[i + 1].p, ps[1]);
+            }
+
+            function make_arrows(first_p, pivot_p, c, start_i, end_i) {
+                let x_dir = (first_p.y - pivot_p.y) / grid_dy;
+                let y_dir = (first_p.x - pivot_p.x) / grid_dx;
+                let offset_x = grid_dx / 2;
+                let offset_y = grid_dy / 2;
+                if (canRotateLeft(c, start_i, end_i, pivot_p)) {
+                    let left_p = {
+                        x: first_p.x + offset_x * x_dir,
+                        y: first_p.y - offset_x * y_dir
+                    };
+                    init_arrow(first_p, left_p, "red", _=>rotateLeft(c.slice(start_i, end_i), pivot_p));
+                }
+                if (canRotateRight(c, start_i, end_i, pivot_p)) {
+                    let right_p = {
+                        x: first_p.x - offset_x * x_dir,
+                        y: first_p.y + offset_y * y_dir
+                    };
+                    init_arrow(first_p, right_p, "green", _=>rotateRight(c.slice(start_i, end_i), pivot_p));
+                }
+            }
+
+            for (let i = 0; i <= chain_len; ++i) {
+                let c = chain[i].c;
+                c.setAttributeNS(null, "class", "clickable");
+                c.addEventListener("mousedown", _=>{
+                    clear_arrows();
+
+                    let pivot_p = chain[i].p;
+                    let left_p = i != 0 && chain[i - 1].p;
+                    let right_p = i != chain_len && chain[i + 1].p;
+
+                    let highlight_c = init_circle(pivot_p.x, pivot_p.y, aa_r + 5, "yellow", "none");
+                    highlight_c.setAttributeNS(null, "stroke-width", 3);
+                    arrows.appendChild(highlight_c);
+
+                    if (left_p) {
+                        make_arrows(left_p, pivot_p, chain, 0, i);
+                    }
+                    if (right_p) {
+                        make_arrows(right_p, pivot_p, chain, i, chain_len + 1);
+                    }
+                }
+                );
+            }
+
+            function rotateAround(c, pivot, dir) {
+                c.forEach(e=>{
+                    let new_x = (dir == "right" ? -1 : 1) * (e.p.y - pivot.y) + pivot.x;
+                    let new_y = (dir == "left" ? -1 : 1) * (e.p.x - pivot.x) + pivot.y;
+                    e.p.x = new_x;
+                    e.p.y = new_y;
+                }
+                );
+                // TODO: don't mess with global chain
+                highlight_hh_pairs(chain);
+            }
+            let rotateRight = (c,pivot)=>rotateAround(c, pivot, "right");
+            let rotateLeft = (c,pivot)=>rotateAround(c, pivot, "left");
+
+            function saw(c) {
+                c.sort();
+                for (let i = 0; i < c.length; ++i) {
+                    if (i != c.length - 1 && c[i][0] == c[i + 1][0] && c[i][1] == c[i + 1][1]) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            function copy_chain(c) {
+                return c.map(e=>[e.p.x, e.p.y]);
+            }
+
+            function canRotate(c, start_i, end_i, pivot, dir) {
+                let c_copy = copy_chain(c);
+                c_copy.slice(start_i, end_i).forEach(e=>{
+                    let new_x = (dir == "right" ? -1 : 1) * (e[1] - pivot.y) + pivot.x;
+                    let new_y = (dir == "left" ? -1 : 1) * (e[0] - pivot.x) + pivot.y;
+                    e[0] = new_x;
+                    e[1] = new_y;
+                }
+                );
+                return saw(c_copy);
+            }
+            let canRotateRight = (c,s,e,p)=>canRotate(c, s, e, p, "right");
+            let canRotateLeft = (c,s,e,p)=>canRotate(c, s, e, p, "left");
+
+            function adjacent(p1, p2) {
+                let dx = Math.abs(p1.x - p2.x);
+                let dy = Math.abs(p1.y - p2.y);
+                return (dx == grid_dx && dy == 0) || (dx == 0 && dy == grid_dy);
+            }
+
+            let highlights = l.getElementById("highlights");
+
+            function clear_highlights() {
+                highlights.textContent = "";
+            }
+
+            let energy_p = document.getElementById("energy");
+            function highlight_hh_pairs(c) {
+                let energy = 0;
+                clear_highlights();
+                for (let i = 0; i < c.length; ++i) {
+                    if (c[i].aa) {
+                        for (let j = i + 1; j < c.length; ++j) {
+                            if (c[j].aa && adjacent(c[i].p, c[j].p)) {
+                                --energy;
+                                let h = init_line(c[i].p, c[j].p);
+                                h.setAttributeNS(null, "stroke", "blue");
+                                h.setAttributeNS(null, "stroke-width", aa_r * 2);
+                                h.setAttributeNS(null, "opacity", 0.3);
+                                highlights.appendChild(h);
+                            }
+                        }
+                    }
+                }
+                energy_p.textContent = energy;
+            }
+
+            highlight_hh_pairs(chain);
+
+            let initial_state = copy_chain(chain);
+            document.getElementById("reset").addEventListener("mousedown", _=>{
+                for (let i = 0; i < chain.length; ++i) {
+                    chain[i].p.x = initial_state[i][0];
+                    chain[i].p.y = initial_state[i][1];
+                }
+                highlight_hh_pairs(chain);
+                clear_arrows();
+            }
+            )
+        </script>
+    </body>
+</html>
